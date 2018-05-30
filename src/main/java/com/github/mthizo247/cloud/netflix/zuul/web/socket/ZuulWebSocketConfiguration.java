@@ -20,6 +20,8 @@ import com.github.mthizo247.cloud.netflix.zuul.web.authentication.BasicAuthPrinc
 import com.github.mthizo247.cloud.netflix.zuul.web.authentication.CompositeHeadersCallback;
 import com.github.mthizo247.cloud.netflix.zuul.web.authentication.LoginCookieHeadersCallback;
 import com.github.mthizo247.cloud.netflix.zuul.web.authentication.OAuth2BearerPrincipalHeadersCallback;
+import com.github.mthizo247.cloud.netflix.zuul.web.authentication.stomp.AuthorizationStompHeadersCallback;
+import com.github.mthizo247.cloud.netflix.zuul.web.authentication.stomp.CompositeStompHeadersCallback;
 import com.github.mthizo247.cloud.netflix.zuul.web.filter.ProxyRedirectFilter;
 import com.github.mthizo247.cloud.netflix.zuul.web.proxytarget.CompositeProxyTargetResolver;
 import com.github.mthizo247.cloud.netflix.zuul.web.proxytarget.EurekaProxyTargetResolver;
@@ -100,6 +102,10 @@ public class ZuulWebSocketConfiguration extends AbstractWebSocketMessageBrokerCo
     @Autowired
     @Qualifier("compositeHeadersCallback")
     WebSocketHttpHeadersCallback webSocketHttpHeadersCallback;
+    @Autowired
+    @Qualifier("compositeStompHeadersCallback")
+    WebSocketStompHeadersCallback webSocketStompHeadersCallback;
+
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
@@ -159,6 +165,7 @@ public class ZuulWebSocketConfiguration extends AbstractWebSocketMessageBrokerCo
             public WebSocketHandler decorate(WebSocketHandler handler) {
                 ProxyWebSocketHandler proxyWebSocketHandler = new ProxyWebSocketHandler(
                         handler, stompClient, webSocketHttpHeadersCallback,
+                        webSocketStompHeadersCallback,
                         messagingTemplate,
                         proxyTargetResolver,
                         zuulWebSocketProperties);
@@ -189,6 +196,17 @@ public class ZuulWebSocketConfiguration extends AbstractWebSocketMessageBrokerCo
     @Bean
     public WebSocketHttpHeadersCallback loginCookieHeadersCallback() {
         return new LoginCookieHeadersCallback();
+    }
+
+    @Bean
+    @Primary
+    public WebSocketStompHeadersCallback compositeStompHeadersCallback(final List<WebSocketStompHeadersCallback> callbacks) {
+        return new CompositeStompHeadersCallback(callbacks);
+    }
+
+    @Bean
+    public WebSocketStompHeadersCallback authorizationStompHeadersCallback() {
+        return new AuthorizationStompHeadersCallback();
     }
 
     @Bean

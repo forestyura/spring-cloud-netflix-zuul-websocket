@@ -28,6 +28,8 @@ import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
+import java.net.URI;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,17 +51,19 @@ public class ProxyWebSocketConnectionManagerTests {
     private ListenableFuture<StompSession> listenableFuture = (ListenableFuture<StompSession>) mock(
             ListenableFuture.class);
     private ErrorHandler errHandler = mock(ErrorHandler.class);
+    private WebSocketMessageAccessor messageAccessor = WebSocketMessageAccessor.create("example");
+    private WebSocketStompHeadersCallback stompHeadersCallback = mock(WebSocketStompHeadersCallback.class);
 
     @Before
     public void init() throws Exception {
-        String uri = "http://example.com";
+        URI uri = URI.create("http://example.com");
         proxyConnectionManager = new ProxyWebSocketConnectionManager(messagingTemplate,
-                stompClient, wsSession, headersCallback, uri);
+                stompClient, wsSession, headersCallback, uri.toString(), stompHeadersCallback, messageAccessor);
 
         proxyConnectionManager.errorHandler(errHandler);
 
         when(listenableFuture.get()).thenReturn(serverSession);
-        when(stompClient.connect(uri, new WebSocketHttpHeaders(),
+        when(stompClient.connect(uri, new WebSocketHttpHeaders(), new StompHeaders(),
                 proxyConnectionManager)).thenReturn(listenableFuture);
     }
 

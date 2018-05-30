@@ -47,19 +47,25 @@ public class ProxyWebSocketConnectionManager extends ConnectionManagerSupport
     private final WebSocketStompClient stompClient;
     private final WebSocketSession userAgentSession;
     private final WebSocketHttpHeadersCallback httpHeadersCallback;
+    private final WebSocketStompHeadersCallback webSocketStompHeadersCallback;
     private StompSession serverSession;
     private Map<String, StompSession.Subscription> subscriptions = new ConcurrentHashMap<>();
     private ErrorHandler errorHandler;
     private SimpMessagingTemplate messagingTemplate;
+    private WebSocketMessageAccessor accessor;
 
     public ProxyWebSocketConnectionManager(SimpMessagingTemplate messagingTemplate,
                                            WebSocketStompClient stompClient, WebSocketSession userAgentSession,
-                                           WebSocketHttpHeadersCallback httpHeadersCallback, String uri) {
+                                           WebSocketHttpHeadersCallback httpHeadersCallback, String uri,
+                                           WebSocketStompHeadersCallback webSocketStompHeadersCallback,
+                                           WebSocketMessageAccessor accessor) {
         super(uri);
         this.messagingTemplate = messagingTemplate;
         this.stompClient = stompClient;
         this.userAgentSession = userAgentSession;
         this.httpHeadersCallback = httpHeadersCallback;
+        this.webSocketStompHeadersCallback = webSocketStompHeadersCallback;
+        this.accessor = accessor;
     }
 
     public void errorHandler(ErrorHandler errorHandler) {
@@ -74,6 +80,14 @@ public class ProxyWebSocketConnectionManager extends ConnectionManagerSupport
         return wsHeaders;
     }
 
+    private StompHeaders buildWebSocketStompHeaders() {
+        StompHeaders stompHeaders = new StompHeaders();
+        if (webSocketStompHeadersCallback != null) {
+            webSocketStompHeadersCallback.applyHeaders(userAgentSession, accessor, stompHeaders);
+        }
+        return stompHeaders;
+    }
+
     @Override
     protected void openConnection() {
         connect();
@@ -82,7 +96,7 @@ public class ProxyWebSocketConnectionManager extends ConnectionManagerSupport
     public void connect() {
         try {
             serverSession = stompClient
-                    .connect(getUri().toString(), buildWebSocketHttpHeaders(), this)
+                    .connect(getUri(), buildWebSocketHttpHeaders(), buildWebSocketStompHeaders(),  this)
                     .get();
         } catch (Exception e) {
             logger.error("Error connecting to web socket uri " + getUri(), e);

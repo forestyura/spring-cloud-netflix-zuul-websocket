@@ -46,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ProxyWebSocketHandler extends WebSocketHandlerDecorator {
     private final Logger logger = LoggerFactory.getLogger(ProxyWebSocketHandler.class);
     private final WebSocketHttpHeadersCallback headersCallback;
+    private final WebSocketStompHeadersCallback webSocketStompHeadersCallback;
     private final SimpMessagingTemplate messagingTemplate;
     private final ProxyTargetResolver proxyTargetResolver;
     private final ZuulWebSocketProperties zuulWebSocketProperties;
@@ -56,6 +57,7 @@ public class ProxyWebSocketHandler extends WebSocketHandlerDecorator {
     public ProxyWebSocketHandler(WebSocketHandler delegate,
                                  WebSocketStompClient stompClient,
                                  WebSocketHttpHeadersCallback headersCallback,
+                                 WebSocketStompHeadersCallback webSocketStompHeadersCallback,
                                  SimpMessagingTemplate messagingTemplate,
                                  ProxyTargetResolver proxyTargetResolver,
                                  ZuulWebSocketProperties zuulWebSocketProperties) {
@@ -65,6 +67,7 @@ public class ProxyWebSocketHandler extends WebSocketHandlerDecorator {
         this.messagingTemplate = messagingTemplate;
         this.proxyTargetResolver = proxyTargetResolver;
         this.zuulWebSocketProperties = zuulWebSocketProperties;
+        this.webSocketStompHeadersCallback = webSocketStompHeadersCallback;
     }
 
     public void errorHandler(ErrorHandler errorHandler) {
@@ -148,7 +151,7 @@ public class ProxyWebSocketHandler extends WebSocketHandlerDecorator {
 
         if (StompCommand.CONNECT.toString().equalsIgnoreCase(accessor.getCommand())) {
             handled = true;
-            connectToProxiedTarget(session);
+            connectToProxiedTarget(session, accessor);
         }
 
         if (!handled) {
@@ -159,7 +162,7 @@ public class ProxyWebSocketHandler extends WebSocketHandlerDecorator {
         }
     }
 
-    private void connectToProxiedTarget(WebSocketSession session) {
+    private void connectToProxiedTarget(WebSocketSession session, WebSocketMessageAccessor accessor) {
         URI sessionUri = session.getUri();
         ZuulWebSocketProperties.WsBrokerage wsBrokerage = getWebSocketBrokarage(
                 sessionUri);
@@ -180,7 +183,7 @@ public class ProxyWebSocketHandler extends WebSocketHandlerDecorator {
                 .toUriString();
 
         ProxyWebSocketConnectionManager connectionManager = new ProxyWebSocketConnectionManager(
-                messagingTemplate, stompClient, session, headersCallback, uri);
+                messagingTemplate, stompClient, session, headersCallback, uri, webSocketStompHeadersCallback, accessor);
         connectionManager.errorHandler(this.errorHandler);
         managers.put(session, connectionManager);
         connectionManager.start();
